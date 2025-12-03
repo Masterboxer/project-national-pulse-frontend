@@ -1,4 +1,4 @@
-package com.example.project_national_pulse
+package com.example.project_civic_action
 
 import io.flutter.embedding.android.FlutterActivity
 
