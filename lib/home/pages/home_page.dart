@@ -9,14 +9,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // Mock data - replace with actual data from backend/DB
-  final Map<String, dynamic>? _todayPost = {
-    'template': 'What went well today?',
-    'text':
-        'What went well today? Had a productive meeting and learned Flutter!',
-    'photoPath': 'mock_photo.jpg',
-    'timestamp': DateTime.now(),
-  };
+  // Today's post data - initially null
+  Map<String, dynamic>? _todayPost;
 
   // Mock friends' posts - fetch from backend
   final List<Map<String, dynamic>> _friendsPosts = [
@@ -46,12 +40,41 @@ class _HomePageState extends State<HomePage> {
     },
   ];
 
-  void _createNewPost() {
-    // Navigate to create post page
-    Navigator.push(
+  @override
+  void initState() {
+    super.initState();
+    _loadTodayPost();
+  }
+
+  Future<void> _loadTodayPost() async {
+    // TODO: Load today's post from backend/local DB
+    // Check if user has already posted today
+    // setState(() {
+    //   _todayPost = fetchedPost;
+    // });
+  }
+
+  Future<void> _createNewPost() async {
+    // Navigate to create post page and wait for result
+    final result = await Navigator.push<Map<String, dynamic>>(
       context,
       MaterialPageRoute(builder: (context) => const CreatePostPage()),
     );
+
+    // If post was created, update the UI
+    if (result != null) {
+      setState(() {
+        _todayPost = result;
+      });
+    }
+  }
+
+  Future<void> _refreshPosts() async {
+    // TODO: Refresh posts from backend
+    await Future.delayed(const Duration(seconds: 1));
+    setState(() {
+      // Reload data
+    });
   }
 
   @override
@@ -63,70 +86,65 @@ class _HomePageState extends State<HomePage> {
         title: const Text('My Micro Journal'),
         centerTitle: false,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline),
-            onPressed: _createNewPost,
-            tooltip: 'Create new post',
-          ),
+          if (_todayPost == null)
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline),
+              onPressed: _createNewPost,
+              tooltip: 'Create today\'s post',
+            ),
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () async {
-          // TODO: Refresh posts from backend
-          await Future.delayed(const Duration(seconds: 1));
-        },
-        child: ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: 1 + (_todayPost != null ? 1 : 0) + _friendsPosts.length,
-          itemBuilder: (context, index) {
-            // Section header
-            if (index == 0) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Text(
-                  "Today's Post",
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              );
-            }
+        onRefresh: _refreshPosts,
+        child:
+            _todayPost == null
+                ? _buildEmptyState(theme)
+                : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: 3 + _friendsPosts.length,
+                  itemBuilder: (context, index) {
+                    // "Today's Post" header
+                    if (index == 0) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: Text(
+                          "Today's Post",
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      );
+                    }
 
-            // Today's post (pinned at top)
-            if (_todayPost != null && index == 1) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildTodayPostCard(theme, _todayPost!),
-                  const SizedBox(height: 24),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Text(
-                      'Friends Activity',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
+                    // Today's post card
+                    if (index == 1) {
+                      return _buildTodayPostCard(theme, _todayPost!);
+                    }
+
+                    // "Friends Activity" header
+                    if (index == 2) {
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 24, bottom: 16),
+                        child: Text(
+                          'Friends Activity',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      );
+                    }
+
+                    // Friends' posts
+                    final friendPostIndex = index - 3;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: _buildFriendPostCard(
+                        theme,
+                        _friendsPosts[friendPostIndex],
                       ),
-                    ),
-                  ),
-                ],
-              );
-            }
-
-            // Friends' posts
-            final friendPostIndex = index - (_todayPost != null ? 2 : 1);
-            if (friendPostIndex < _friendsPosts.length) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: _buildFriendPostCard(
-                  theme,
-                  _friendsPosts[friendPostIndex],
+                    );
+                  },
                 ),
-              );
-            }
-
-            return const SizedBox.shrink();
-          },
-        ),
       ),
       floatingActionButton:
           _todayPost == null
@@ -136,6 +154,45 @@ class _HomePageState extends State<HomePage> {
                 label: const Text('Create Today\'s Post'),
               )
               : null,
+    );
+  }
+
+  Widget _buildEmptyState(ThemeData theme) {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.edit_note_outlined,
+              size: 80,
+              color: theme.colorScheme.primary.withOpacity(0.5),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'No post yet today',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Share your thoughts and reflections for today',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            FilledButton.icon(
+              onPressed: _createNewPost,
+              icon: const Icon(Icons.add),
+              label: const Text('Create Your First Post'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -151,7 +208,6 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // "Your Post" indicator
             Row(
               children: [
                 Icon(Icons.person, size: 20, color: theme.colorScheme.primary),
@@ -173,8 +229,6 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
             const SizedBox(height: 12),
-
-            // Template tag
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
@@ -190,13 +244,9 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             const SizedBox(height: 12),
-
-            // Post text
             Text(post['text'], style: theme.textTheme.bodyLarge),
-            const SizedBox(height: 8),
-
-            // Photo indicator
-            if (post['photoPath'] != null)
+            if (post['photoPath'] != null) ...[
+              const SizedBox(height: 8),
               Row(
                 children: [
                   Icon(
@@ -213,10 +263,8 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ],
               ),
-
-            const SizedBox(height: 8),
-
-            // Note about editing
+            ],
+            const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
@@ -231,11 +279,13 @@ class _HomePageState extends State<HomePage> {
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    'Posts cannot be edited after submission',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontStyle: FontStyle.italic,
+                  Expanded(
+                    child: Text(
+                      'Posts cannot be edited after submission',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontStyle: FontStyle.italic,
+                      ),
                     ),
                   ),
                 ],
@@ -256,7 +306,6 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // User info header
             Row(
               children: [
                 CircleAvatar(
@@ -293,8 +342,6 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
             const SizedBox(height: 12),
-
-            // Template tag
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
@@ -310,11 +357,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             const SizedBox(height: 12),
-
-            // Post text
             Text(post['text'], style: theme.textTheme.bodyMedium),
-
-            // Photo indicator
             if (post['photoPath'] != null) ...[
               const SizedBox(height: 8),
               Row(

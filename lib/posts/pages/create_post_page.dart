@@ -9,9 +9,7 @@ class CreatePostPage extends StatefulWidget {
 
 class _CreatePostPageState extends State<CreatePostPage> {
   final TextEditingController _postController = TextEditingController();
-  String? _todayPostText;
   String? _todayPhotoPath;
-  bool _hasPostedToday = false;
   String? _selectedTemplate;
 
   final List<String> _templates = [
@@ -28,7 +26,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
   Future<void> _pickPhoto() async {
     // TODO: integrate image picker
-    // For now, just mock a value
     setState(() {
       _todayPhotoPath = 'mock_photo_path.jpg';
     });
@@ -37,7 +34,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
   void _submitPost() {
     final text = _postController.text.trim();
 
-    // Validate template selection
     if (_selectedTemplate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -58,18 +54,18 @@ class _CreatePostPageState extends State<CreatePostPage> {
       return;
     }
 
-    // TODO: send to backend / local DB
-    setState(() {
-      _todayPostText = text;
-      _hasPostedToday = true;
-    });
-  }
+    // Create post data object
+    final postData = {
+      'template': _selectedTemplate!,
+      'text': text,
+      'photoPath': _todayPhotoPath,
+      'timestamp': DateTime.now(),
+    };
 
-  void _viewFriendsFeed() {
-    // TODO: navigate to Friends Feed page
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Friends Feed coming soon')));
+    // TODO: Send to backend / local DB before popping
+
+    // Return the post data to HomePage
+    Navigator.pop(context, postData);
   }
 
   @override
@@ -77,13 +73,10 @@ class _CreatePostPageState extends State<CreatePostPage> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('My Micro Journal'), centerTitle: false),
+      appBar: AppBar(title: const Text('Create Post'), centerTitle: false),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child:
-            _hasPostedToday
-                ? _buildPostedView(theme)
-                : _buildComposeView(theme),
+        child: _buildComposeView(theme),
       ),
     );
   }
@@ -118,7 +111,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
                     onSelected: (selected) {
                       setState(() {
                         _selectedTemplate = selected ? template : null;
-                        // Clear or update text field based on selection
                         if (selected) {
                           _postController.text = '$template ';
                           _postController
@@ -216,72 +208,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildPostedView(ThemeData theme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text("Today's post", style: theme.textTheme.titleLarge),
-        const SizedBox(height: 8),
-        Text(
-          "You cannot edit after posting.",
-          style: theme.textTheme.bodySmall,
-        ),
-        const SizedBox(height: 16),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Show selected template
-                if (_selectedTemplate != null) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      _selectedTemplate!,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onPrimaryContainer,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                if (_todayPostText != null) ...[
-                  Text(_todayPostText!, style: theme.textTheme.bodyLarge),
-                  const SizedBox(height: 8),
-                ],
-                if (_todayPhotoPath != null)
-                  Row(
-                    children: [
-                      const Icon(Icons.photo, size: 18),
-                      const SizedBox(width: 4),
-                      Text('Photo attached', style: theme.textTheme.bodySmall),
-                    ],
-                  ),
-              ],
-            ),
-          ),
-        ),
-        const Spacer(),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton(
-            onPressed: _viewFriendsFeed,
-            child: const Text('View Friends Feed'),
-          ),
-        ),
-      ],
     );
   }
 }
