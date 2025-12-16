@@ -22,21 +22,45 @@ class TemplateService {
   final List<PostTemplate> _templates = const [
     PostTemplate(
       id: 'template_001',
-      name: 'What went well today?',
-      description: 'Reflect on positive moments and achievements',
-      icon: Icons.celebration,
+      name: 'How was your day today?',
+      description: 'A simple check-in about how your day went overall.',
+      icon: Icons.wb_sunny_outlined,
     ),
     PostTemplate(
       id: 'template_002',
-      name: 'One thing to improve tomorrow:',
-      description: 'Identify areas for growth and development',
-      icon: Icons.trending_up,
+      name: 'What made you smile today?',
+      description: 'Capture the little or big moments that brought you joy.',
+      icon: Icons.emoji_emotions_outlined,
     ),
     PostTemplate(
       id: 'template_003',
-      name: 'Grateful for:',
-      description: 'Express gratitude for people, things, or experiences',
-      icon: Icons.favorite,
+      name: 'A small win I had today was…',
+      description: 'Celebrate any tiny victory, no matter how small.',
+      icon: Icons.celebration_outlined,
+    ),
+    PostTemplate(
+      id: 'template_004',
+      name: 'Something that surprised me today was…',
+      description: 'Note anything unexpected that stood out.',
+      icon: Icons.lightbulb_outline,
+    ),
+    PostTemplate(
+      id: 'template_005',
+      name: 'One moment I want to remember from today is…',
+      description: 'Save a memory you don’t want to forget.',
+      icon: Icons.bookmark_border,
+    ),
+    PostTemplate(
+      id: 'template_006',
+      name: 'Someone I appreciated today was…',
+      description: 'Reflect on a person who mattered to you today.',
+      icon: Icons.favorite_border,
+    ),
+    PostTemplate(
+      id: 'template_007',
+      name: 'Tomorrow, I want to…',
+      description: 'Set a gentle intention for your next day.',
+      icon: Icons.arrow_forward_ios,
     ),
   ];
 

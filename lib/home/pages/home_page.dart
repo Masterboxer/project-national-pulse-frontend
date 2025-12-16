@@ -15,37 +15,46 @@ class _HomePageState extends State<HomePage> {
   Map<String, dynamic>? _todayPost;
 
   // Mock friends' posts - fetch from backend
-  final List<Map<String, dynamic>> _friendsPosts = [
-    {
-      'userName': 'Sarah Johnson',
-      'userAvatar': 'assets/avatar1.jpg',
-      'template': 'Grateful for:',
-      'text': 'Grateful for: My supportive team and sunny weather today',
-      'photoPath': null,
-      'timestamp': DateTime.now().subtract(const Duration(hours: 2)),
-    },
-    {
-      'userName': 'Mike Chen',
-      'userAvatar': 'assets/avatar2.jpg',
-      'template': 'One thing to improve tomorrow:',
-      'text': 'One thing to improve tomorrow: Better time management',
-      'photoPath': 'mock_photo2.jpg',
-      'timestamp': DateTime.now().subtract(const Duration(hours: 5)),
-    },
-    {
-      'userName': 'Emily Davis',
-      'userAvatar': 'assets/avatar3.jpg',
-      'template': 'What went well today?',
-      'text': 'What went well today? Finished my project ahead of schedule!',
-      'photoPath': null,
-      'timestamp': DateTime.now().subtract(const Duration(hours: 8)),
-    },
-  ];
+  // Using templateId to reference templates from the service
+  late final List<Map<String, dynamic>> _friendsPosts;
 
   @override
   void initState() {
     super.initState();
     _loadTodayPost();
+    _initializeMockData();
+  }
+
+  void _initializeMockData() {
+    // Initialize mock data using template IDs from the service
+    _friendsPosts = [
+      {
+        'userName': 'Sarah Johnson',
+        'userAvatar': 'assets/avatar1.jpg',
+        'templateId': 'template_006', // Someone I appreciated today was…
+        'text':
+            'Someone I appreciated today was… my supportive team and the sunny weather!',
+        'photoPath': null,
+        'timestamp': DateTime.now().subtract(const Duration(hours: 2)),
+      },
+      {
+        'userName': 'Mike Chen',
+        'userAvatar': 'assets/avatar2.jpg',
+        'templateId': 'template_007', // Tomorrow, I want to…
+        'text': 'Tomorrow, I want to… work on better time management',
+        'photoPath': 'mock_photo2.jpg',
+        'timestamp': DateTime.now().subtract(const Duration(hours: 5)),
+      },
+      {
+        'userName': 'Emily Davis',
+        'userAvatar': 'assets/avatar3.jpg',
+        'templateId': 'template_003', // A small win I had today was…
+        'text':
+            'A small win I had today was… finishing my project ahead of schedule!',
+        'photoPath': null,
+        'timestamp': DateTime.now().subtract(const Duration(hours: 8)),
+      },
+    ];
   }
 
   Future<void> _loadTodayPost() async {
@@ -255,11 +264,13 @@ class _HomePageState extends State<HomePage> {
                     ),
                     const SizedBox(width: 6),
                   ],
-                  Text(
-                    post['template'],
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onPrimaryContainer,
-                      fontWeight: FontWeight.w600,
+                  Flexible(
+                    child: Text(
+                      template?.name ?? post['template'] ?? 'Unknown template',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onPrimaryContainer,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
@@ -267,7 +278,52 @@ class _HomePageState extends State<HomePage> {
             ),
             const SizedBox(height: 12),
             Text(post['text'], style: theme.textTheme.bodyLarge),
-            // ... rest of your existing card code ...
+            if (post['photoPath'] != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(
+                    Icons.photo,
+                    size: 18,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Photo attached',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.lock_outline,
+                    size: 16,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Posts cannot be edited after submission',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -275,6 +331,13 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildFriendPostCard(ThemeData theme, Map<String, dynamic> post) {
+    // Get template details from service using templateId
+    final templateId = post['templateId'] as String?;
+    final template =
+        templateId != null
+            ? _templateService.getTemplateById(templateId)
+            : null;
+
     return Card(
       elevation: 1,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -325,12 +388,27 @@ class _HomePageState extends State<HomePage> {
                 color: theme.colorScheme.secondaryContainer,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Text(
-                post['template'],
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSecondaryContainer,
-                  fontWeight: FontWeight.w600,
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (template != null) ...[
+                    Icon(
+                      template.icon,
+                      size: 16,
+                      color: theme.colorScheme.onSecondaryContainer,
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                  Flexible(
+                    child: Text(
+                      template?.name ?? 'Unknown template',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSecondaryContainer,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 12),
