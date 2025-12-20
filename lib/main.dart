@@ -14,7 +14,7 @@ class ProjectMicroJournalApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Project MicroJournal',
+      title: 'Project Micro Journal',
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(

@@ -13,67 +13,58 @@ class _HomePageState extends State<HomePage> {
   final TemplateService _templateService = TemplateService.instance;
 
   Map<String, dynamic>? _todayPost;
-
-  // Mock friends' posts - fetch from backend
-  // Using templateId to reference templates from the service
-  late final List<Map<String, dynamic>> _friendsPosts;
+  List<Map<String, dynamic>> _friendsPosts = [];
+  bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _loadTodayPost();
-    _initializeMockData();
+    _initializeData();
   }
 
-  void _initializeMockData() {
-    // Initialize mock data using template IDs from the service
-    _friendsPosts = [
-      {
-        'userName': 'Sarah Johnson',
-        'userAvatar': 'assets/avatar1.jpg',
-        'templateId': 'template_006', // Someone I appreciated today was…
-        'text':
-            'Someone I appreciated today was… my supportive team and the sunny weather!',
-        'photoPath': null,
-        'timestamp': DateTime.now().subtract(const Duration(hours: 2)),
-      },
-      {
-        'userName': 'Mike Chen',
-        'userAvatar': 'assets/avatar2.jpg',
-        'templateId': 'template_007', // Tomorrow, I want to…
-        'text': 'Tomorrow, I want to… work on better time management',
-        'photoPath': 'mock_photo2.jpg',
-        'timestamp': DateTime.now().subtract(const Duration(hours: 5)),
-      },
-      {
-        'userName': 'Emily Davis',
-        'userAvatar': 'assets/avatar3.jpg',
-        'templateId': 'template_003', // A small win I had today was…
-        'text':
-            'A small win I had today was… finishing my project ahead of schedule!',
-        'photoPath': null,
-        'timestamp': DateTime.now().subtract(const Duration(hours: 8)),
-      },
-    ];
+  Future<void> _initializeData() async {
+    setState(() => _isLoading = true);
+    try {
+      await Future.wait([
+        _templateService.fetchTemplatesFromBackend(),
+        _loadTodayPost(),
+        _loadFriendsPosts(),
+      ]);
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   Future<void> _loadTodayPost() async {
-    // TODO: Load today's post from backend/local DB
-    // Check if user has already posted today
-    // setState(() {
-    //   _todayPost = fetchedPost;
-    // });
+    // TODO: Implement API call to check if user has posted today
+    // For now, keep null (no post today)
+    setState(() {
+      _todayPost = null;
+    });
+  }
+
+  Future<void> _loadFriendsPosts() async {
+    // TODO: Implement API call to fetch friends' posts
+    // Mock data replaced with empty list for now
+    setState(() {
+      _friendsPosts = [];
+    });
   }
 
   Future<void> _createNewPost() async {
-    // Navigate to create post page and wait for result
     final result = await Navigator.push<Map<String, dynamic>>(
       context,
       MaterialPageRoute(builder: (context) => const CreatePostPage()),
     );
 
-    // If post was created, update the UI
-    if (result != null) {
+    if (result != null && mounted) {
       setState(() {
         _todayPost = result;
       });
@@ -81,30 +72,46 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _refreshPosts() async {
-    // TODO: Refresh posts from backend
-    await Future.delayed(const Duration(seconds: 1));
-    setState(() {
-      // Reload data
-    });
+    await _initializeData();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    if (_isLoading) {
+      return Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: theme.colorScheme.error,
+              ),
+              const SizedBox(height: 16),
+              Text('Failed to load data', style: theme.textTheme.headlineSmall),
+              const SizedBox(height: 8),
+              Text(_error!, style: theme.textTheme.bodyMedium),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: _initializeData,
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Micro Journal'),
-        centerTitle: false,
-        actions: [
-          if (_todayPost == null)
-            IconButton(
-              icon: const Icon(Icons.add_circle_outline),
-              onPressed: _createNewPost,
-              tooltip: 'Create today\'s post',
-            ),
-        ],
-      ),
+      // ... rest of your existing Scaffold code remains the same
+      // Just update the ListView.builder itemCount:
       body: RefreshIndicator(
         onRefresh: _refreshPosts,
         child:
@@ -112,7 +119,8 @@ class _HomePageState extends State<HomePage> {
                 ? _buildEmptyState(theme)
                 : ListView.builder(
                   padding: const EdgeInsets.all(16),
-                  itemCount: 3 + _friendsPosts.length,
+                  itemCount:
+                      _friendsPosts.isEmpty ? 2 : 3 + _friendsPosts.length,
                   itemBuilder: (context, index) {
                     // "Today's Post" header
                     if (index == 0) {
@@ -132,8 +140,8 @@ class _HomePageState extends State<HomePage> {
                       return _buildTodayPostCard(theme, _todayPost!);
                     }
 
-                    // "Friends Activity" header
-                    if (index == 2) {
+                    // "Friends Activity" header (only if friends posts exist)
+                    if (_friendsPosts.isNotEmpty && index == 2) {
                       return Padding(
                         padding: const EdgeInsets.only(top: 24, bottom: 16),
                         child: Text(
@@ -146,14 +154,19 @@ class _HomePageState extends State<HomePage> {
                     }
 
                     // Friends' posts
-                    final friendPostIndex = index - 3;
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: _buildFriendPostCard(
-                        theme,
-                        _friendsPosts[friendPostIndex],
-                      ),
-                    );
+                    final friendPostIndex =
+                        _friendsPosts.isEmpty ? index - 2 : index - 3;
+                    if (friendPostIndex < _friendsPosts.length) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: _buildFriendPostCard(
+                          theme,
+                          _friendsPosts[friendPostIndex],
+                        ),
+                      );
+                    }
+
+                    return const SizedBox.shrink();
                   },
                 ),
       ),
@@ -208,8 +221,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildTodayPostCard(ThemeData theme, Map<String, dynamic> post) {
-    // Get template details from service
-    final templateId = post['templateId'] as String?;
+    final templateId = post['templateId'] as int?;
     final template =
         templateId != null
             ? _templateService.getTemplateById(templateId)
@@ -258,7 +270,7 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   if (template != null) ...[
                     Icon(
-                      template.icon,
+                      template.iconData,
                       size: 16,
                       color: theme.colorScheme.onPrimaryContainer,
                     ),
@@ -328,11 +340,12 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
+    // Replace: template?.name ?? post['template'] ?? 'Unknown template',
+    // With:     template?.name ?? 'Unknown template',
   }
 
   Widget _buildFriendPostCard(ThemeData theme, Map<String, dynamic> post) {
-    // Get template details from service using templateId
-    final templateId = post['templateId'] as String?;
+    final templateId = post['templateId'] as int?;
     final template =
         templateId != null
             ? _templateService.getTemplateById(templateId)
@@ -393,7 +406,7 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   if (template != null) ...[
                     Icon(
-                      template.icon,
+                      template.iconData,
                       size: 16,
                       color: theme.colorScheme.onSecondaryContainer,
                     ),

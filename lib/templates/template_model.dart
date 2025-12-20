@@ -1,29 +1,40 @@
 import 'package:flutter/material.dart';
 
 class PostTemplate {
-  final String id;
+  final int id;
   final String name;
   final String description;
-  final IconData icon;
+  final String icon;
+  final DateTime createdAt;
 
-  const PostTemplate({
+  PostTemplate({
     required this.id,
     required this.name,
     required this.description,
     required this.icon,
+    required this.createdAt,
   });
-
-  // You can add toJson/fromJson methods for backend integration later
-  Map<String, dynamic> toJson() {
-    return {'id': id, 'name': name, 'description': description};
-  }
 
   factory PostTemplate.fromJson(Map<String, dynamic> json) {
     return PostTemplate(
-      id: json['id'],
-      name: json['name'],
-      description: json['description'] ?? '',
-      icon: Icons.text_fields, // Default icon when loading from backend
+      id: json['id'] as int,
+      name: json['name'] as String,
+      description: json['description'] as String,
+      icon: json['icon'] as String,
+      createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'description': description,
+      'icon': icon,
+      'created_at': createdAt.toIso8601String(),
+    };
+  }
+
+  IconData get iconData =>
+      IconData(int.parse(icon, radix: 16), fontFamily: 'MaterialIcons');
 }
