@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:project_micro_journal/environment/development.dart';
 import 'package:project_micro_journal/posts/pages/create_post_page.dart';
 import 'package:project_micro_journal/templates/template_service.dart';
 
@@ -43,19 +46,46 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadTodayPost() async {
-    // TODO: Implement API call to check if user has posted today
-    // For now, keep null (no post today)
-    setState(() {
-      _todayPost = null;
-    });
+    try {
+      final response = await http.get(
+        Uri.parse('${Environment.baseUrl}posts/today?user_id=1'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        if (mounted) {
+          setState(() {
+            _todayPost = {
+              'id': jsonData['id'],
+              'templateId': jsonData['templateId'],
+              'text': jsonData['text'],
+              'photoPath': jsonData['photoPath'],
+              'timestamp': DateTime.parse(jsonData['created_at']),
+            };
+          });
+        }
+      } else if (response.statusCode == 204) {
+        if (mounted) setState(() => _todayPost = null);
+      } else {
+        print('Today post error: ${response.statusCode} - ${response.body}');
+        if (mounted) setState(() => _todayPost = null);
+      }
+    } catch (e) {
+      print('Error loading today post: $e');
+      if (mounted) setState(() => _todayPost = null);
+    }
   }
 
   Future<void> _loadFriendsPosts() async {
-    // TODO: Implement API call to fetch friends' posts
-    // Mock data replaced with empty list for now
-    setState(() {
-      _friendsPosts = [];
-    });
+    try {
+      // TODO: Implement friends posts API
+      // For now, empty list
+      setState(() => _friendsPosts = []);
+    } catch (e) {
+      print('Error loading friends posts: $e');
+      setState(() => _friendsPosts = []);
+    }
   }
 
   Future<void> _createNewPost() async {
@@ -68,6 +98,7 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _todayPost = result;
       });
+      await _loadTodayPost();
     }
   }
 
