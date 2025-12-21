@@ -46,19 +46,32 @@ class TemplateService {
       );
 
       if (response.statusCode == 200) {
-        final List<dynamic> jsonList = json.decode(response.body);
+        final dynamic jsonData = json.decode(response.body);
+
+        List<dynamic> jsonList = [];
+        if (jsonData is List) {
+          jsonList = jsonData;
+        } else if (jsonData is Map) {
+          jsonList = jsonData['templates'] ?? [];
+        }
+
         _templates =
-            jsonList.map((json) => PostTemplate.fromJson(json)).toList();
+            jsonList
+                .where((json) => json != null)
+                .map(
+                  (json) => PostTemplate.fromJson(json as Map<String, dynamic>),
+                )
+                .toList();
+
         return getAllTemplates();
       } else {
-        throw Exception('Failed to load templates: ${response.statusCode}');
+        return [];
       }
     } catch (e) {
-      throw Exception('Error fetching templates: $e');
+      return [];
     }
   }
 
-  // Refresh templates
   Future<void> refreshTemplates() async {
     await fetchTemplatesFromBackend();
   }

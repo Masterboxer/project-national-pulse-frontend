@@ -15,6 +15,7 @@ class CreatePostPage extends StatefulWidget {
 class _CreatePostPageState extends State<CreatePostPage> {
   final TextEditingController _postController = TextEditingController();
   final TemplateService _templateService = TemplateService.instance;
+  final ScrollController _scrollController = ScrollController();
 
   String? _todayPhotoPath;
   PostTemplate? _selectedTemplate;
@@ -31,6 +32,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
   @override
   void dispose() {
     _postController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -121,21 +123,19 @@ class _CreatePostPageState extends State<CreatePostPage> {
     final templates = _templateService.getAllTemplates();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Create Post'),
-        centerTitle: false,
-        actions: [
-          if (!_isSubmitting)
-            TextButton(onPressed: _submitPost, child: const Text('Submit')),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Create Post'), centerTitle: false),
       body:
           _isLoadingTemplates
               ? const Center(child: CircularProgressIndicator())
               : _error != null
               ? _buildErrorView(theme)
               : Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(
+                  16,
+                  16,
+                  16,
+                  100,
+                ), // Extra bottom padding
                 child: _buildComposeView(theme, templates),
               ),
     );
@@ -163,242 +163,391 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
   Widget _buildComposeView(ThemeData theme, List<PostTemplate> templates) {
     return SingleChildScrollView(
+      controller: _scrollController,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text("Today's micro-post", style: theme.textTheme.titleLarge),
           const SizedBox(height: 8),
           Text('Up to 280 characters.', style: theme.textTheme.bodySmall),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
 
-          // Template Selection Section
+          // Template Selection Section - Redesigned
           Text(
             'Choose a template *',
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
+
           if (templates.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text('No templates available'),
-            )
-          else
-            SizedBox(
-              height: 140,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children:
-                    templates.map((template) {
-                      final isSelected = _selectedTemplate?.id == template.id;
-                      return GestureDetector(
-                        onTap:
-                            _isSubmitting
-                                ? null
-                                : () {
-                                  setState(() {
-                                    _selectedTemplate =
-                                        isSelected ? null : template;
-                                    if (!isSelected) {
-                                      _postController.text =
-                                          '${template.name} ';
-                                      _postController.selection =
-                                          TextSelection.fromPosition(
-                                            TextPosition(
-                                              offset:
-                                                  _postController.text.length,
-                                            ),
-                                          );
-                                    } else {
-                                      _postController.clear();
-                                    }
-                                  });
-                                },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          margin: const EdgeInsets.only(right: 12),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            color:
-                                isSelected
-                                    ? theme.colorScheme.primaryContainer
-                                    : theme.colorScheme.surfaceVariant
-                                        .withOpacity(0.5),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color:
-                                  isSelected
-                                      ? theme.colorScheme.primary
-                                      : theme.colorScheme.outline,
-                              width: isSelected ? 2 : 1,
-                            ),
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                template.iconData,
-                                size: 24,
-                                color:
-                                    isSelected
-                                        ? theme.colorScheme.onPrimaryContainer
-                                        : theme.colorScheme.onSurfaceVariant,
-                              ),
-                              const SizedBox(height: 4),
-                              Flexible(
-                                child: Text(
-                                  template.name,
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    fontWeight:
-                                        isSelected
-                                            ? FontWeight.w600
-                                            : FontWeight.normal,
-                                    color:
-                                        isSelected
-                                            ? theme
-                                                .colorScheme
-                                                .onPrimaryContainer
-                                            : theme
-                                                .colorScheme
-                                                .onSurfaceVariant,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }).toList(),
-              ),
-            ),
-
-          const SizedBox(height: 20),
-
-          // Selected Template Indicator
-          if (_selectedTemplate != null)
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: theme.colorScheme.primary, width: 1),
+                color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(16),
               ),
-              child: Row(
+              child: Column(
                 children: [
                   Icon(
-                    _selectedTemplate!.iconData,
-                    color: theme.colorScheme.primary,
-                    size: 20,
+                    Icons.temple_hindu_sharp,
+                    size: 48,
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Template: ${_selectedTemplate!.name}',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurface,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        if (_selectedTemplate!.description.isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            _selectedTemplate!.description,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No templates available',
+                    style: theme.textTheme.titleMedium,
                   ),
                 ],
               ),
+            )
+          else ...[
+            // Compact Grid Layout
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final crossAxisCount =
+                    constraints.maxWidth > 600
+                        ? 3
+                        : constraints.maxWidth > 400
+                        ? 2
+                        : 2;
+
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    childAspectRatio: 1.1,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                  ),
+                  itemCount: templates.length,
+                  itemBuilder: (context, index) {
+                    final template = templates[index];
+                    final isSelected = _selectedTemplate?.id == template.id;
+
+                    return _buildTemplateCard(theme, template, isSelected);
+                  },
+                );
+              },
             ),
 
-          const SizedBox(height: 16),
-
-          // Text Input Field
-          TextField(
-            controller: _postController,
-            maxLength: 280,
-            maxLines: 5,
-            enabled: !_isSubmitting && _selectedTemplate != null,
-            decoration: InputDecoration(
-              border: const OutlineInputBorder(),
-              hintText:
-                  _selectedTemplate != null
-                      ? 'Continue writing your reflection...'
-                      : 'Select a template first to start writing',
-              counterText: null,
-            ),
-          ),
-
-          const SizedBox(height: 12),
-
-          // Character count
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Text(
-                '${_postController.text.length}/280',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color:
-                      _postController.text.length > 260
-                          ? theme.colorScheme.error
-                          : theme.colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // Photo Button
-          TextButton.icon(
-            onPressed:
-                (!_isSubmitting && _selectedTemplate != null)
-                    ? _pickPhoto
-                    : null,
-            icon: const Icon(Icons.photo_outlined),
-            label: Text(
-              _todayPhotoPath != null
-                  ? 'Photo added ✓'
-                  : 'Add photo (optional)',
-              style: TextStyle(
-                color:
-                    _selectedTemplate != null && !_isSubmitting
-                        ? null
-                        : theme.colorScheme.onSurface.withOpacity(0.5),
+            const SizedBox(height: 8),
+            Text(
+              'Tap to select a template',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-          ),
+          ],
 
           const SizedBox(height: 24),
 
-          // Submit Button (only shown when not submitting via AppBar)
-          if (_isSubmitting)
-            const Center(child: CircularProgressIndicator())
-          else
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: _submitPost,
-                child: const Text("Submit today's post"),
-              ),
-            ),
+          // Selected Template Indicator (Enhanced)
+          if (_selectedTemplate != null) ...[
+            _buildSelectedTemplateIndicator(theme),
+            const SizedBox(height: 20),
+          ],
+
+          // Rest of your existing UI (TextField, etc.)
+          _buildTextInputSection(theme),
+          _buildPhotoSection(theme),
         ],
       ),
+    );
+  }
+
+  Widget _buildTemplateCard(
+    ThemeData theme,
+    PostTemplate template,
+    bool isSelected,
+  ) {
+    return GestureDetector(
+      onTap: _isSubmitting ? null : () => _selectTemplate(template),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        decoration: BoxDecoration(
+          gradient:
+              isSelected
+                  ? LinearGradient(
+                    colors: [
+                      theme.colorScheme.primary.withOpacity(0.1),
+                      theme.colorScheme.primaryContainer.withOpacity(0.2),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                  : null,
+          color: isSelected ? null : theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color:
+                isSelected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.outline.withOpacity(0.3),
+            width: isSelected ? 2 : 1,
+          ),
+          boxShadow:
+              isSelected
+                  ? [
+                    BoxShadow(
+                      color: theme.colorScheme.primary.withOpacity(0.15),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                  : [],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  template.iconData,
+                  size: 28,
+                  color:
+                      isSelected
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(height: 8),
+                Flexible(
+                  child: Text(
+                    template.name,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      fontWeight:
+                          isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color:
+                          isSelected
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurface,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (isSelected)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.check_circle,
+                        size: 14,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSelectedTemplateIndicator(ThemeData theme) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            theme.colorScheme.primary.withOpacity(0.08),
+            theme.colorScheme.primaryContainer.withOpacity(0.12),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.colorScheme.primary.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              _selectedTemplate!.iconData,
+              color: theme.colorScheme.primary,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _selectedTemplate!.name,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                if (_selectedTemplate!.description.isNotEmpty)
+                  Text(
+                    _selectedTemplate!.description,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Icon(
+            Icons.edit,
+            color: theme.colorScheme.primary.withOpacity(0.6),
+            size: 20,
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _selectTemplate(PostTemplate template) {
+    setState(() {
+      final wasSelected = _selectedTemplate?.id == template.id;
+      _selectedTemplate = wasSelected ? null : template;
+      if (wasSelected) {
+        _postController.clear();
+      }
+    });
+
+    if (_selectedTemplate != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeInOut,
+          );
+        }
+      });
+    }
+  }
+
+  Widget _buildTextInputSection(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: _postController,
+          maxLength: 280,
+          maxLines: 5,
+          enabled: !_isSubmitting && _selectedTemplate != null,
+          decoration: InputDecoration(
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            hintText:
+                _selectedTemplate != null
+                    ? 'Continue writing your reflection...'
+                    : 'Select a template first to start writing',
+            counterText: null,
+            contentPadding: const EdgeInsets.all(16),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Text(
+              '${_postController.text.length}/280',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color:
+                    _postController.text.length > 260
+                        ? theme.colorScheme.error
+                        : theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPhotoSection(ThemeData theme) {
+    return Column(
+      children: [
+        const SizedBox(height: 16),
+        TextButton.icon(
+          onPressed:
+              (!_isSubmitting && _selectedTemplate != null) ? _pickPhoto : null,
+          icon: Icon(
+            _todayPhotoPath != null ? Icons.check_circle : Icons.photo_outlined,
+          ),
+          label: Text(
+            _todayPhotoPath != null ? 'Photo added ✓' : 'Add photo (optional)',
+            style: TextStyle(
+              color:
+                  _selectedTemplate != null && !_isSubmitting
+                      ? null
+                      : theme.colorScheme.onSurface.withOpacity(0.5),
+            ),
+          ),
+        ),
+        const SizedBox(height: 40), // Extra space for button prominence
+        // Button with proper hit area
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: SizedBox(
+            width: double.infinity,
+            height: 56, // Fixed height for better touch target
+            child: ElevatedButton(
+              onPressed: _isSubmitting ? null : _submitPost,
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.zero, // Remove default padding
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child:
+                  _isSubmitting
+                      ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      )
+                      : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.send, size: 20),
+                          const SizedBox(width: 12),
+                          Flexible(
+                            child: Text(
+                              'Submit today\'s post (${_postController.text.length}/280)',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 32), // Safe area padding
+      ],
     );
   }
 }

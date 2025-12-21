@@ -30,19 +30,21 @@ class ProjectMicroJournalApp extends StatelessWidget {
         ),
       ),
       themeMode: ThemeMode.system,
-      home: FutureBuilder<String?>(
-        future: authenticationTokenStorageService.getAccessToken(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          } else if (snapshot.hasData && snapshot.data != null) {
-            return const HomePage();
-          } else {
-            return const SignupPage();
-          }
-        },
+      home: SafeArea(
+        child: FutureBuilder<String?>(
+          future: authenticationTokenStorageService.getAccessToken(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            } else if (snapshot.hasData && snapshot.data != null) {
+              return const HomePage();
+            } else {
+              return const SignupPage();
+            }
+          },
+        ),
       ),
       debugShowCheckedModeBanner: false,
     );
