@@ -218,10 +218,7 @@ class _HomePageState extends State<HomePage> {
                     if (index <= _userPosts.length) {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 16),
-                        child: _buildTodayPostCard(
-                          theme,
-                          _userPosts[index - 1],
-                        ),
+                        child: _buildUserPostCard(theme, _userPosts[index - 1]),
                       );
                     }
 
@@ -258,6 +255,108 @@ class _HomePageState extends State<HomePage> {
         onPressed: _createNewPost,
         icon: const Icon(Icons.add),
         label: const Text('New Post'),
+      ),
+    );
+  }
+
+  Widget _buildUserPostCard(ThemeData theme, Map<String, dynamic> post) {
+    final templateId = post['templateId'] as int?;
+    PostTemplate? template =
+        templateId != null
+            ? _templateService.getTemplateById(templateId)
+            : null;
+    final displayName = template?.name ?? 'Reflection';
+    final timestamp = post['timestamp'] as DateTime;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _formatPostDate(timestamp),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => _deletePost(post['id']),
+                  icon: Icon(
+                    Icons.delete_outline,
+                    size: 20,
+                    color: theme.colorScheme.error.withOpacity(0.7),
+                  ),
+                  tooltip: 'Delete post',
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (template != null) ...[
+                    Icon(
+                      template.iconData,
+                      size: 16,
+                      color: theme.colorScheme.onPrimaryContainer,
+                    ),
+                    const SizedBox(width: 6),
+                  ] else ...[
+                    Icon(
+                      Icons.help_outline,
+                      size: 16,
+                      color: theme.colorScheme.onPrimaryContainer,
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                  Flexible(
+                    child: Text(
+                      displayName,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onPrimaryContainer,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(post['text'], style: theme.textTheme.bodyLarge),
+            if (post['photoPath'] != null &&
+                post['photoPath'].toString().isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(
+                    Icons.photo,
+                    size: 18,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Photo attached',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -369,144 +468,6 @@ class _HomePageState extends State<HomePage> {
         }
       }
     }
-  }
-
-  Widget _buildTodayPostCard(ThemeData theme, Map<String, dynamic> post) {
-    final templateId = post['templateId'] as int?;
-    PostTemplate? template =
-        templateId != null
-            ? _templateService.getTemplateById(templateId)
-            : null;
-    final displayName = template?.name ?? 'Reflection';
-    final timestamp = post['timestamp'] as DateTime;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.person, size: 20, color: theme.colorScheme.primary),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Your Post',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                Text(
-                  _formatPostDate(timestamp),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  onPressed: () => _deletePost(post['id']),
-                  icon: Icon(
-                    Icons.delete_outline,
-                    size: 20,
-                    color: theme.colorScheme.error.withOpacity(0.7),
-                  ),
-                  tooltip: 'Delete post',
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (template != null) ...[
-                    Icon(
-                      template.iconData,
-                      size: 16,
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
-                    const SizedBox(width: 6),
-                  ] else ...[
-                    Icon(
-                      Icons.help_outline,
-                      size: 16,
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
-                    const SizedBox(width: 6),
-                  ],
-                  Flexible(
-                    child: Text(
-                      displayName,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onPrimaryContainer,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(post['text'], style: theme.textTheme.bodyLarge),
-            if (post['photoPath'] != null &&
-                post['photoPath'].toString().isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(
-                    Icons.photo,
-                    size: 18,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Photo attached',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.lock_outline,
-                    size: 16,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Posts cannot be edited after submission',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _buildFriendPostCard(ThemeData theme, Map<String, dynamic> post) {
