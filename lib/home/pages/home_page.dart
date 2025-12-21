@@ -263,14 +263,77 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Future<void> _deletePost(int postId) async {
+    final theme = Theme.of(context);
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Delete Post'),
+            content: const Text(
+              'Are you sure you want to delete this post? This action cannot be undone.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: theme.colorScheme.error,
+                ),
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text(
+                  'Delete',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+    );
+
+    if (confirm == true && mounted) {
+      try {
+        final response = await http.delete(
+          Uri.parse('${Environment.baseUrl}posts/$postId'),
+          headers: {'Content-Type': 'application/json'},
+        );
+
+        if (response.statusCode == 200) {
+          await _loadFeed();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Post deleted successfully')),
+            );
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to delete post'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
+  }
+
   Widget _buildTodayPostCard(ThemeData theme, Map<String, dynamic> post) {
     final templateId = post['templateId'] as int?;
     PostTemplate? template =
         templateId != null
             ? _templateService.getTemplateById(templateId)
             : null;
-
-    final displayName = template?.name;
+    final displayName = template?.name ?? 'Reflection';
 
     return Card(
       child: Padding(
@@ -282,19 +345,30 @@ class _HomePageState extends State<HomePage> {
               children: [
                 Icon(Icons.person, size: 20, color: theme.colorScheme.primary),
                 const SizedBox(width: 8),
-                Text(
-                  'Your Post',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: theme.colorScheme.primary,
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Text(
+                    'Your Post',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-                const Spacer(),
                 Text(
                   'Today',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: () => _deletePost(post['id']),
+                  icon: Icon(
+                    Icons.delete_outline,
+                    size: 20,
+                    color: theme.colorScheme.error.withOpacity(0.7),
+                  ),
+                  tooltip: 'Delete post',
                 ),
               ],
             ),
@@ -325,7 +399,7 @@ class _HomePageState extends State<HomePage> {
                   ],
                   Flexible(
                     child: Text(
-                      displayName ?? "Unknown Template",
+                      displayName,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onPrimaryContainer,
                         fontWeight: FontWeight.w600,
@@ -337,7 +411,8 @@ class _HomePageState extends State<HomePage> {
             ),
             const SizedBox(height: 12),
             Text(post['text'], style: theme.textTheme.bodyLarge),
-            if (post['photoPath'] != null) ...[
+            if (post['photoPath'] != null &&
+                post['photoPath'].toString().isNotEmpty) ...[
               const SizedBox(height: 8),
               Row(
                 children: [
