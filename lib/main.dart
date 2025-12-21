@@ -74,7 +74,7 @@ class _MainAppTabsState extends State<MainAppTabs> {
     const HomePage(),
     const Center(
       child: Text(
-        'Friends Page\nComing soon!',
+        'Buddies Page\nComing soon!',
         textAlign: TextAlign.center,
         style: TextStyle(fontSize: 18),
       ),
@@ -108,7 +108,7 @@ class _MainAppTabsState extends State<MainAppTabs> {
           NavigationDestination(
             icon: Icon(Icons.people_outlined),
             selectedIcon: Icon(Icons.people),
-            label: 'Friends',
+            label: 'Buddies',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outlined),

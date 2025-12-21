@@ -19,7 +19,7 @@ class _HomePageState extends State<HomePage> {
   final AuthenticationTokenStorageService _authStorage =
       AuthenticationTokenStorageService();
 
-  Map<String, dynamic>? _todayPost;
+  List<Map<String, dynamic>> _userPosts = [];
   List<Map<String, dynamic>> _friendsPosts = [];
   bool _isLoading = true;
   String? _error;
@@ -50,11 +50,13 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadFeed() async {
     try {
-      final String? userId = await _authStorage.getUserId();
-      if (userId == null) return;
+      final String? userIdStr = await _authStorage.getUserId();
+      if (userIdStr == null) return;
+
+      final int userId = int.parse(userIdStr);
 
       final response = await http.get(
-        Uri.parse('${Environment.baseUrl}posts/$userId/feed'),
+        Uri.parse('${Environment.baseUrl}posts/$userIdStr/feed'),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -64,39 +66,32 @@ class _HomePageState extends State<HomePage> {
         if (mounted) {
           setState(() {
             if (feedData.isNotEmpty) {
-              final firstPost = feedData[0];
-              _todayPost = {
-                'id': firstPost['id'],
-                'user_id': firstPost['user_id'],
-                'templateId': firstPost['template_id'],
-                'text': firstPost['text'],
-                'photoPath': firstPost['photo_path'],
-                'timestamp': DateTime.parse(firstPost['created_at']),
-                'userName': firstPost['display_name'] ?? 'You',
-              };
+              final userPosts = <Map<String, dynamic>>[];
+              final buddyPosts = <Map<String, dynamic>>[];
 
-              _friendsPosts =
-                  feedData.length > 1
-                      ? feedData
-                          .sublist(1)
-                          .map(
-                            (post) => {
-                              'id': post['id'],
-                              'user_id': post['user_id'],
-                              'templateId': post['template_id'],
-                              'text': post['text'],
-                              'photoPath': post['photo_path'],
-                              'timestamp': DateTime.parse(post['created_at']),
-                              'userName':
-                                  post['display_name'] ??
-                                  post['username'] ??
-                                  'Friend',
-                            },
-                          )
-                          .toList()
-                      : [];
+              for (final post in feedData) {
+                final postMap = {
+                  'id': post['id'],
+                  'user_id': post['user_id'],
+                  'templateId': post['template_id'],
+                  'text': post['text'],
+                  'photoPath': post['photo_path'],
+                  'timestamp': DateTime.parse(post['created_at']),
+                  'userName':
+                      post['display_name'] ?? post['username'] ?? 'User',
+                };
+
+                if ((post['user_id'] as int) == userId) {
+                  userPosts.add(postMap);
+                } else {
+                  buddyPosts.add(postMap);
+                }
+              }
+
+              _userPosts = userPosts;
+              _friendsPosts = buddyPosts;
             } else {
-              _todayPost = null;
+              _userPosts = [];
               _friendsPosts = [];
             }
           });
@@ -104,8 +99,44 @@ class _HomePageState extends State<HomePage> {
       }
     } catch (e) {
       if (mounted) {
-        _todayPost = null;
-        _friendsPosts = [];
+        setState(() {
+          _userPosts = [];
+          _friendsPosts = [];
+        });
+      }
+    }
+  }
+
+  String _formatPostDate(DateTime timestamp) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final postDate = DateTime(timestamp.year, timestamp.month, timestamp.day);
+
+    if (postDate == today) {
+      return 'Today';
+    } else if (postDate == yesterday) {
+      return 'Yesterday';
+    } else {
+      final daysAgo = today.difference(postDate).inDays;
+      if (daysAgo <= 7) {
+        return '$daysAgo day${daysAgo == 1 ? '' : 's'} ago';
+      } else {
+        final months = [
+          'Jan',
+          'Feb',
+          'Mar',
+          'Apr',
+          'May',
+          'Jun',
+          'Jul',
+          'Aug',
+          'Sep',
+          'Oct',
+          'Nov',
+          'Dec',
+        ];
+        return '${months[timestamp.month - 1]} ${timestamp.day}';
       }
     }
   }
@@ -163,18 +194,20 @@ class _HomePageState extends State<HomePage> {
       body: RefreshIndicator(
         onRefresh: _refreshPosts,
         child:
-            _todayPost == null
+            _userPosts.isEmpty
                 ? _buildEmptyState(theme)
                 : ListView.builder(
                   padding: const EdgeInsets.all(16),
                   itemCount:
-                      _friendsPosts.isEmpty ? 2 : 3 + _friendsPosts.length,
+                      1 +
+                      _userPosts.length +
+                      (_friendsPosts.isEmpty ? 0 : 1 + _friendsPosts.length),
                   itemBuilder: (context, index) {
                     if (index == 0) {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 16),
                         child: Text(
-                          "Your Post",
+                          'Your Posts (${_userPosts.length})',
                           style: theme.textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -182,15 +215,22 @@ class _HomePageState extends State<HomePage> {
                       );
                     }
 
-                    if (index == 1) {
-                      return _buildTodayPostCard(theme, _todayPost!);
+                    if (index <= _userPosts.length) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: _buildTodayPostCard(
+                          theme,
+                          _userPosts[index - 1],
+                        ),
+                      );
                     }
 
-                    if (_friendsPosts.isNotEmpty && index == 2) {
+                    if (index == _userPosts.length + 1 &&
+                        _friendsPosts.isNotEmpty) {
                       return Padding(
                         padding: const EdgeInsets.only(top: 24, bottom: 16),
                         child: Text(
-                          'Friends Activity',
+                          'Friends Activity (${_friendsPosts.length})',
                           style: theme.textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -198,8 +238,9 @@ class _HomePageState extends State<HomePage> {
                       );
                     }
 
-                    final friendIndex = index - 3;
-                    if (friendIndex < _friendsPosts.length) {
+                    final friendIndex = index - _userPosts.length - 2;
+                    if (friendIndex >= 0 &&
+                        friendIndex < _friendsPosts.length) {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 16),
                         child: _buildFriendPostCard(
@@ -213,51 +254,54 @@ class _HomePageState extends State<HomePage> {
                   },
                 ),
       ),
-      floatingActionButton:
-          _todayPost == null
-              ? FloatingActionButton.extended(
-                onPressed: _createNewPost,
-                icon: const Icon(Icons.edit),
-                label: const Text('Create Today\'s Post'),
-              )
-              : null,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _createNewPost,
+        icon: const Icon(Icons.add),
+        label: const Text('New Post'),
+      ),
     );
   }
 
   Widget _buildEmptyState(ThemeData theme) {
-    return Center(
+    return RefreshIndicator(
+      onRefresh: _refreshPosts,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.edit_note_outlined,
-              size: 80,
-              color: theme.colorScheme.primary.withOpacity(0.5),
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height - 200,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.edit_note_outlined,
+                  size: 80,
+                  color: theme.colorScheme.primary.withOpacity(0.5),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'No post yet today',
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Share your thoughts and reflections for today',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                FilledButton.icon(
+                  onPressed: _createNewPost,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Create Your First Post'),
+                ),
+              ],
             ),
-            const SizedBox(height: 24),
-            Text(
-              'No post yet today',
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Share your thoughts and reflections for today',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            FilledButton.icon(
-              onPressed: _createNewPost,
-              icon: const Icon(Icons.add),
-              label: const Text('Create Your First Post'),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -301,20 +345,20 @@ class _HomePageState extends State<HomePage> {
         );
 
         if (response.statusCode == 200) {
-          await _loadFeed();
+          await _initializeData();
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Post deleted successfully')),
             );
-          }
-        } else {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Failed to delete post'),
-                backgroundColor: Colors.red,
-              ),
-            );
+          } else {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Failed to delete post'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
           }
         }
       } catch (e) {
@@ -334,6 +378,7 @@ class _HomePageState extends State<HomePage> {
             ? _templateService.getTemplateById(templateId)
             : null;
     final displayName = template?.name ?? 'Reflection';
+    final timestamp = post['timestamp'] as DateTime;
 
     return Card(
       child: Padding(
@@ -355,7 +400,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 Text(
-                  'Today',
+                  _formatPostDate(timestamp),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
