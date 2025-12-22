@@ -3,6 +3,7 @@ import 'package:project_micro_journal/authentication/pages/signup_page.dart';
 import 'package:project_micro_journal/authentication/services/authentication_token_storage_service.dart';
 import 'package:project_micro_journal/buddies/page/buddies_page.dart';
 import 'package:project_micro_journal/home/pages/home_page.dart';
+import 'package:project_micro_journal/posts/pages/create_post_page.dart';
 
 void main() {
   runApp(ProjectMicroJournalApp());
@@ -68,7 +69,7 @@ class MainAppTabs extends StatefulWidget {
 
 class _MainAppTabsState extends State<MainAppTabs> {
   int _currentIndex = 0;
-  final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey = GlobalKey();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   final List<Widget> _tabs = [
     const HomePage(),
@@ -84,39 +85,55 @@ class _MainAppTabsState extends State<MainAppTabs> {
 
   @override
   Widget build(BuildContext context) {
+    final viewPadding = MediaQuery.of(context).viewPadding;
+
     return Scaffold(
-      key:
-          _scaffoldMessengerKey.currentContext != null
-              ? _scaffoldMessengerKey
-              : null,
+      key: _scaffoldKey,
       body: SafeArea(
         child: IndexedStack(index: _currentIndex, children: _tabs),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (int index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_filled),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.people_outlined),
-            selectedIcon: Icon(Icons.people),
-            label: 'Buddies',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outlined),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
+      bottomNavigationBar: Padding(
+        padding: EdgeInsets.only(bottom: viewPadding.bottom),
+        child: NavigationBar(
+          selectedIndex: _currentIndex,
+          onDestinationSelected: (int index) {
+            setState(() {
+              _currentIndex = index;
+            });
+          },
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home_filled),
+              label: 'Home',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.people_outlined),
+              selectedIcon: Icon(Icons.people),
+              label: 'Buddies',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.person_outlined),
+              selectedIcon: Icon(Icons.person),
+              label: 'Profile',
+            ),
+          ],
+        ),
       ),
+      floatingActionButton:
+          _currentIndex == 0
+              ? FloatingActionButton.extended(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const CreatePostPage(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('New Post'),
+              )
+              : null,
     );
   }
 }

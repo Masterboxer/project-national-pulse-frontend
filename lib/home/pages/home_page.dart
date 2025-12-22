@@ -189,7 +189,6 @@ class _HomePageState extends State<HomePage> {
       );
     }
 
-    // Return just the content widget, NO SCAFFOLD
     return RefreshIndicator(
       onRefresh: _refreshPosts,
       child:
@@ -357,7 +356,7 @@ class _HomePageState extends State<HomePage> {
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       child: SizedBox(
-        height: MediaQuery.of(context).size.height - 200, // Keep this
+        height: MediaQuery.of(context).size.height - 200,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -433,23 +432,23 @@ class _HomePageState extends State<HomePage> {
         if (response.statusCode == 200) {
           await _initializeData();
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
+            ScaffoldMessenger.maybeOf(context)?.showSnackBar(
               const SnackBar(content: Text('Post deleted successfully')),
             );
-          } else {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Failed to delete post'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+              SnackBar(
+                content: Text('Failed to delete post'),
+                backgroundColor: Colors.red,
+              ),
+            );
           }
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
             SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
           );
         }
