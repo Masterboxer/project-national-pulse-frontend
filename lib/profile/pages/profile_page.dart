@@ -42,7 +42,7 @@ class _ProfilePageState extends State<ProfilePage> {
         return;
       }
 
-      // FIXED: Ensure templates are loaded before loading posts
+      // Ensure templates are loaded before loading posts
       await _templateService.fetchTemplatesFromBackend();
 
       // Load user info and posts in parallel
@@ -72,18 +72,18 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _loadUserPosts(String userId) async {
+    // CHANGED: Use the new /posts/user/{userId} endpoint
     final response = await http.get(
-      Uri.parse('${Environment.baseUrl}posts/$userId/feed'),
+      Uri.parse('${Environment.baseUrl}posts/user/$userId'),
       headers: {'Content-Type': 'application/json'},
     );
 
     if (response.statusCode == 200) {
-      final List<dynamic> feedData = json.decode(response.body);
+      final List<dynamic> postsData = json.decode(response.body);
 
       setState(() {
         _userPosts =
-            feedData
-                .where((post) => post['user_id'].toString() == userId)
+            postsData
                 .map<Map<String, dynamic>>(
                   (post) => {
                     'id': post['id'],
@@ -100,6 +100,13 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               );
       });
+    } else if (response.statusCode == 404) {
+      // No posts found, set empty list
+      setState(() {
+        _userPosts = [];
+      });
+    } else {
+      throw Exception('Failed to load user posts');
     }
   }
 
@@ -398,10 +405,15 @@ class _ProfilePageState extends State<ProfilePage> {
                     color: theme.colorScheme.primary,
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    template.name,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
+                  // FIXED: Wrap in Expanded to prevent overflow
+                  Expanded(
+                    child: Text(
+                      template.name,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow:
+                          TextOverflow.ellipsis, // Add ellipsis for long names
                     ),
                   ),
                 ] else ...[
@@ -411,15 +423,18 @@ class _ProfilePageState extends State<ProfilePage> {
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    'Unknown Template',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.onSurfaceVariant,
+                  Expanded(
+                    child: Text(
+                      'Unknown Template',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
-                const Spacer(),
+                const SizedBox(width: 8), // Add spacing before date
                 Text(
                   _formatDate(timestamp),
                   style: theme.textTheme.bodySmall?.copyWith(
