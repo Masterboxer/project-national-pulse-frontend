@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:project_micro_journal/authentication/pages/forgot_password_page.dart';
 import 'package:project_micro_journal/authentication/services/authentication_service.dart';
 import 'package:project_micro_journal/authentication/services/authentication_token_storage_service.dart';
-import 'package:project_micro_journal/home/pages/home_page.dart';
+import 'package:project_micro_journal/main.dart'; // CHANGED: Import main.dart for MainAppTabs
 import 'package:project_micro_journal/utils/snackbar_service.dart';
 import 'signup_page.dart';
 
@@ -66,11 +66,13 @@ class LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     });
 
     try {
+      print('🔑 [LOGIN] Attempting login...');
       final loginResponse = await authService.login(
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
 
+      print('🔑 [LOGIN] Login successful, saving tokens...');
       await authenticationTokenStorageService.saveTokensAndId(
         loginResponse.accessToken,
         loginResponse.refreshToken,
@@ -82,12 +84,14 @@ class LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       });
 
       if (mounted) {
+        print('🔑 [LOGIN] Navigating to MainAppTabs...');
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const HomePage()),
+          MaterialPageRoute(builder: (context) => const MainAppTabs()), // FIXED
         );
       }
     } catch (err) {
+      print('❌ [LOGIN] Login failed: $err');
       snackbarService.showErrorSnackBar(context, err.toString());
 
       setState(() {
@@ -148,7 +152,6 @@ class LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Logo/Title
                           Hero(
                             tag: 'auth_logo',
                             child: Icon(
@@ -175,8 +178,6 @@ class LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                             textAlign: TextAlign.center,
                           ),
                           SizedBox(height: 32),
-
-                          // Email field
                           TextFormField(
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
@@ -200,8 +201,6 @@ class LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                             },
                           ),
                           SizedBox(height: 16),
-
-                          // Password field
                           TextFormField(
                             controller: _passwordController,
                             obscureText: obscurePassword,
@@ -234,10 +233,7 @@ class LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                               return null;
                             },
                           ),
-
                           SizedBox(height: 16),
-
-                          // Forgot password
                           Align(
                             alignment: Alignment.centerRight,
                             child: TextButton(
@@ -245,10 +241,7 @@ class LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                               child: Text('Forgot Password?'),
                             ),
                           ),
-
                           SizedBox(height: 24),
-
-                          // Login button
                           SizedBox(
                             height: 50,
                             child: ElevatedButton(
@@ -283,10 +276,7 @@ class LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                       ),
                             ),
                           ),
-
                           SizedBox(height: 24),
-
-                          // Navigate to signup
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
