@@ -72,7 +72,6 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _loadUserPosts(String userId) async {
-    // CHANGED: Use the new /posts/user/{userId} endpoint
     final response = await http.get(
       Uri.parse('${Environment.baseUrl}posts/user/$userId'),
       headers: {'Content-Type': 'application/json'},
@@ -101,12 +100,82 @@ class _ProfilePageState extends State<ProfilePage> {
               );
       });
     } else if (response.statusCode == 404) {
-      // No posts found, set empty list
       setState(() {
         _userPosts = [];
       });
     } else {
       throw Exception('Failed to load user posts');
+    }
+  }
+
+  Future<void> _deletePost(int postId) async {
+    final theme = Theme.of(context);
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Delete Post'),
+            content: const Text(
+              'Are you sure you want to delete this post? This action cannot be undone.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: theme.colorScheme.error,
+                ),
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final response = await http.delete(
+        Uri.parse('${Environment.baseUrl}posts/$postId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        // Remove the post from the local list
+        setState(() {
+          _userPosts.removeWhere((post) => post['id'] == postId);
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Post deleted successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete post: ${response.body}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting post: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -389,6 +458,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ? _templateService.getTemplateById(templateId)
             : null;
     final timestamp = post['timestamp'] as DateTime;
+    final postId = post['id'] as int;
 
     return Card(
       child: Padding(
@@ -405,15 +475,13 @@ class _ProfilePageState extends State<ProfilePage> {
                     color: theme.colorScheme.primary,
                   ),
                   const SizedBox(width: 8),
-                  // FIXED: Wrap in Expanded to prevent overflow
                   Expanded(
                     child: Text(
                       template.name,
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
-                      overflow:
-                          TextOverflow.ellipsis, // Add ellipsis for long names
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ] else ...[
@@ -434,12 +502,24 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                   ),
                 ],
-                const SizedBox(width: 8), // Add spacing before date
+                const SizedBox(width: 8),
                 Text(
                   _formatDate(timestamp),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
+                ),
+                // ADD: Delete button
+                IconButton(
+                  icon: Icon(
+                    Icons.delete_outline,
+                    size: 20,
+                    color: theme.colorScheme.error,
+                  ),
+                  onPressed: () => _deletePost(postId),
+                  tooltip: 'Delete post',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
               ],
             ),
