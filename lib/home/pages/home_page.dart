@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:project_micro_journal/authentication/services/authentication_token_storage_service.dart';
@@ -18,6 +19,8 @@ class _HomePageState extends State<HomePage> {
   final TemplateService _templateService = TemplateService.instance;
   final AuthenticationTokenStorageService _authStorage =
       AuthenticationTokenStorageService();
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+  final environmentVariable = Environment.baseUrl;
 
   List<Map<String, dynamic>> _userPosts = [];
   List<Map<String, dynamic>> _friendsPosts = [];
@@ -28,6 +31,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _initializeData();
+    setupPushNotifications();
   }
 
   Future<void> _initializeData() async {
@@ -45,6 +49,67 @@ class _HomePageState extends State<HomePage> {
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  Future<void> setupPushNotifications() async {
+    await _firebaseMessaging.requestPermission();
+
+    // Get initial token
+    final fcmToken = await _firebaseMessaging.getToken();
+    print('FCM Token: $fcmToken');
+    await sendTokenToBackend(fcmToken);
+
+    // Listen for token refresh
+    FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+      print('FCM Token refreshed: $newToken');
+      sendTokenToBackend(newToken);
+    });
+
+    // Foreground messages
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      print('Received message: ${message.notification?.title}');
+    });
+
+    // Background tap handler
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      print('Notification tapped: ${message.notification?.title}');
+    });
+  }
+
+  Future<void> sendTokenToBackend(String? token) async {
+    if (token == null) return;
+
+    try {
+      final String? userId = await _authStorage.getUserId();
+      if (userId == null) {
+        print('User not authenticated, skipping token registration');
+        return;
+      }
+
+      final requestBody = {'token': token, 'user_id': int.parse(userId)};
+
+      // Print what we're sending
+      print('Sending FCM token request: $requestBody');
+
+      final response = await http.post(
+        Uri.parse('${environmentVariable}fcm/register-token'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(requestBody),
+      );
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print('FCM token registered successfully');
+      } else {
+        print(
+          'Failed to register token: ${response.statusCode} - ${response.body}',
+        );
+      }
+    } catch (e) {
+      print('Error sending token to backend: $e');
     }
   }
 

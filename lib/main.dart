@@ -1,11 +1,15 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:project_micro_journal/authentication/pages/signup_page.dart';
 import 'package:project_micro_journal/authentication/services/authentication_token_storage_service.dart';
 import 'package:project_micro_journal/buddies/page/buddies_page.dart';
+import 'package:project_micro_journal/firebase_options.dart';
 import 'package:project_micro_journal/home/pages/home_page.dart';
 import 'package:project_micro_journal/posts/pages/create_post_page.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(ProjectMicroJournalApp());
 }
 

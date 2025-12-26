@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "1056025366422",
+    "project_id": "project-micro-journal",
+    "storage_bucket": "project-micro-journal.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1056025366422:android:7633395900288cbdea97b7",
+        "android_client_info": {
+          "package_name": "com.masterboxer.project_micro_journal"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAjeOoHFuihnPzi-JUVPXbfpv6wnMt_Gfk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1056025366422:android:2e65255c5f693f25ea97b7",
+        "android_client_info": {
+          "package_name": "com.masterboxer.projectmicrojournal"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAjeOoHFuihnPzi-JUVPXbfpv6wnMt_Gfk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
