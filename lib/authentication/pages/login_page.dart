@@ -66,13 +66,11 @@ class LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     });
 
     try {
-      print('🔑 [LOGIN] Attempting login...');
       final loginResponse = await authService.login(
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
 
-      print('🔑 [LOGIN] Login successful, saving tokens...');
       await authenticationTokenStorageService.saveTokensAndId(
         loginResponse.accessToken,
         loginResponse.refreshToken,
@@ -84,14 +82,12 @@ class LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       });
 
       if (mounted) {
-        print('🔑 [LOGIN] Navigating to MainAppTabs...');
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const MainAppTabs()), // FIXED
         );
       }
     } catch (err) {
-      print('❌ [LOGIN] Login failed: $err');
       snackbarService.showErrorSnackBar(context, err.toString());
 
       setState(() {
