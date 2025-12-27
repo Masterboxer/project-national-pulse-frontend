@@ -117,7 +117,9 @@ class _HomePageState extends State<HomePage> {
   Future<void> _loadFeed() async {
     try {
       final String? userIdStr = await _authStorage.getUserId();
-      if (userIdStr == null) return;
+      if (userIdStr == null) {
+        throw Exception('User ID not found');
+      }
 
       final int userId = int.parse(userIdStr);
 
@@ -129,45 +131,40 @@ class _HomePageState extends State<HomePage> {
       if (response.statusCode == 200) {
         final List<dynamic> feedData = json.decode(response.body);
 
+        final userPosts = <Map<String, dynamic>>[];
+        final buddyPosts = <Map<String, dynamic>>[];
+
+        for (final post in feedData) {
+          final postMap = {
+            'id': post['id'],
+            'user_id': post['user_id'],
+            'templateId': post['template_id'],
+            'text': post['text'],
+            'photoPath': post['photo_path'],
+            'timestamp': DateTime.parse(post['created_at']),
+            'userName': post['display_name'] ?? post['username'] ?? 'User',
+          };
+
+          if ((post['user_id'] as int) == userId) {
+            userPosts.add(postMap);
+          } else {
+            buddyPosts.add(postMap);
+          }
+        }
+
         if (mounted) {
           setState(() {
-            if (feedData.isNotEmpty) {
-              final userPosts = <Map<String, dynamic>>[];
-              final buddyPosts = <Map<String, dynamic>>[];
-
-              for (final post in feedData) {
-                final postMap = {
-                  'id': post['id'],
-                  'user_id': post['user_id'],
-                  'templateId': post['template_id'],
-                  'text': post['text'],
-                  'photoPath': post['photo_path'],
-                  'timestamp': DateTime.parse(post['created_at']),
-                  'userName':
-                      post['display_name'] ?? post['username'] ?? 'User',
-                };
-
-                if ((post['user_id'] as int) == userId) {
-                  userPosts.add(postMap);
-                } else {
-                  buddyPosts.add(postMap);
-                }
-              }
-
-              _userPosts = userPosts;
-              _friendsPosts = buddyPosts;
-            } else {
-              _userPosts = [];
-              _friendsPosts = [];
-            }
+            _userPosts = userPosts;
+            _friendsPosts = buddyPosts;
           });
         }
+      } else {
+        throw Exception('Failed to load feed: ${response.statusCode}');
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _userPosts = [];
-          _friendsPosts = [];
+          _error = 'Error loading feed: $e';
         });
       }
     }
@@ -280,64 +277,71 @@ class _HomePageState extends State<HomePage> {
       );
     }
 
+    if (_userPosts.isEmpty && _friendsPosts.isEmpty) {
+      return _buildEmptyState(theme);
+    }
+
     return RefreshIndicator(
       onRefresh: _refreshPosts,
-      child:
-          _userPosts.isEmpty
-              ? _buildEmptyState(theme)
-              : ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount:
-                    1 +
-                    _userPosts.length +
-                    (_friendsPosts.isEmpty ? 0 : 1 + _friendsPosts.length),
-                itemBuilder: (context, index) {
-                  if (index == 0) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: Text(
-                        'Your Posts (${_userPosts.length})',
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    );
-                  }
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount:
+            (_userPosts.isEmpty ? 0 : 1 + _userPosts.length) +
+            (_friendsPosts.isEmpty ? 0 : 1 + _friendsPosts.length),
+        itemBuilder: (context, index) {
+          int currentIndex = index;
 
-                  if (index <= _userPosts.length) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: _buildUserPostCard(theme, _userPosts[index - 1]),
-                    );
-                  }
+          if (_userPosts.isNotEmpty) {
+            if (currentIndex == 0) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Text(
+                  'Your Posts (${_userPosts.length})',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              );
+            }
 
-                  if (index == _userPosts.length + 1 &&
-                      _friendsPosts.isNotEmpty) {
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 24, bottom: 16),
-                      child: Text(
-                        'Friends Activity (${_friendsPosts.length})',
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    );
-                  }
+            if (currentIndex <= _userPosts.length) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: _buildUserPostCard(theme, _userPosts[currentIndex - 1]),
+              );
+            }
 
-                  final friendIndex = index - _userPosts.length - 2;
-                  if (friendIndex >= 0 && friendIndex < _friendsPosts.length) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: _buildFriendPostCard(
-                        theme,
-                        _friendsPosts[friendIndex],
-                      ),
-                    );
-                  }
+            currentIndex -= (_userPosts.length + 1);
+          }
 
-                  return const SizedBox.shrink();
-                },
-              ),
+          if (_friendsPosts.isNotEmpty) {
+            if (currentIndex == 0) {
+              return Padding(
+                padding: EdgeInsets.only(
+                  top: _userPosts.isEmpty ? 0 : 24,
+                  bottom: 16,
+                ),
+                child: Text(
+                  'Friends Activity (${_friendsPosts.length})',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              );
+            }
+
+            final friendIndex = currentIndex - 1;
+            if (friendIndex >= 0 && friendIndex < _friendsPosts.length) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: _buildFriendPostCard(theme, _friendsPosts[friendIndex]),
+              );
+            }
+          }
+
+          return const SizedBox.shrink();
+        },
+      ),
     );
   }
 
